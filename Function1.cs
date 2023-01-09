@@ -23,14 +23,14 @@ namespace get_azuread_users
             log.LogInformation(System.Environment.GetEnvironmentVariable("AZURE_CLIENT_ID", EnvironmentVariableTarget.Machine));
             log.LogInformation(System.Environment.GetEnvironmentVariable("AZURE_TENANT_ID", EnvironmentVariableTarget.Machine));
             log.LogInformation(System.Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET", EnvironmentVariableTarget.Machine));
-            log.LogInformation(System.Environment.GetEnvironmentVariable("SqlConnectionString1", EnvironmentVariableTarget.Machine));
+            log.LogInformation(System.Environment.GetEnvironmentVariable("SqlConnectionString", EnvironmentVariableTarget.Machine));
 
             // Values from app registration
             // https://learn.microsoft.com/en-us/graph/sdks/choose-authentication-providers?tabs=CS#client-credentials-provider
             var clientId = System.Environment.GetEnvironmentVariable("AZURE_CLIENT_ID", EnvironmentVariableTarget.Machine);
             var tenantId = System.Environment.GetEnvironmentVariable("AZURE_TENANT_ID", EnvironmentVariableTarget.Machine);
             var clientSecret = System.Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET", EnvironmentVariableTarget.Machine);
-            var connectionString = System.Environment.GetEnvironmentVariable("SqlConnectionString1", EnvironmentVariableTarget.Machine);
+            var connectionString = System.Environment.GetEnvironmentVariable("SqlConnectionString", EnvironmentVariableTarget.Machine);
 
             var options = new TokenCredentialOptions
             {
