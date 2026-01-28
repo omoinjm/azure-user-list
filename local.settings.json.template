@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "AZURE_CLIENT_ID": "your-application-client-id",
+    "AZURE_TENANT_ID": "your-directory-tenant-id",
+    "AZURE_CLIENT_SECRET": "your-client-secret-value",
+    "SqlConnectionString": "Server=your-server;Database=your-database;User Id=your-username;Password=your-password;"
+  }
+}

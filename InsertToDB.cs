@@ -9,7 +9,7 @@ namespace Sql.Helper
     {
         // Connection to database
         // Save record to database
-        public static IActionResult SaveData(string connectionString, string result, ILogger log)
+        public static void SaveData(string connectionString, string result, ILogger log)
         {
             try
             {
@@ -18,20 +18,22 @@ namespace Sql.Helper
                     connection.Open();
                     if (result != null)
                     {
-                        var query = $"INSERT INTO [dbo].[TR_AzureUserQuery] (QueryDate, QueryResult) VALUES ('{DateTime.Now}', '{result}')";
-                        SqlCommand command = new SqlCommand(query, connection);
-                        command.ExecuteNonQuery();
+                        using (SqlCommand command = new SqlCommand(
+                            "INSERT INTO [dbo].[TR_AzureUserQuery] (QueryDate, QueryResult) VALUES (@queryDate, @queryResult)",
+                            connection))
+                        {
+                            command.Parameters.AddWithValue("@queryDate", DateTime.Now);
+                            command.Parameters.AddWithValue("@queryResult", result);
+                            command.ExecuteNonQuery();
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                // logs information in the console
                 log.LogError(ex.ToString());
-                return new BadRequestResult();
+                throw;
             }
-
-            return new OkResult();
         }
     }
 }
