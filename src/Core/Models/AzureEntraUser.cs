@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace GetAzureADUsers.Core.Models
+namespace Core.Models
 {
     /// <summary>
     /// Domain model representing an Azure Active Directory user.
@@ -11,7 +11,7 @@ namespace GetAzureADUsers.Core.Models
     /// - Validation and transformation at domain level
     /// - Support for multiple sources (Graph, custom API, etc.)
     /// </summary>
-    public class AzureADUser
+    public class AzureEntraUser
     {
         public string Id { get; set; }
         public string DisplayName { get; set; }

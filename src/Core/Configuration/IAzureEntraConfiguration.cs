@@ -1,12 +1,12 @@
-namespace GetAzureADUsers.Core.Configuration
+namespace Core.Configuration
 {
     /// <summary>
-    /// Contract for Azure AD and application configuration.
+    /// Contract for Azure Entra and application configuration.
     /// 
     /// WHY: Abstracts configuration source, enables mocking in tests,
     /// centralizes configuration access.
     /// </summary>
-    public interface IAzureADConfiguration
+    public interface IAzureEntraConfiguration
     {
         /// <summary>
         /// Azure Application (client) ID from App Registration.

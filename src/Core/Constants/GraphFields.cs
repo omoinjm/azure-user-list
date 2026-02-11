@@ -1,4 +1,4 @@
-namespace GetAzureADUsers.Core.Constants
+namespace Core.Constants
 {
     /// <summary>
     /// Common Graph API field selections.
@@ -11,8 +11,8 @@ namespace GetAzureADUsers.Core.Constants
         /// <summary>
         /// All commonly-used user properties from Graph API.
         /// </summary>
-        public static readonly string[] All = new[]
-        {
+        public static readonly string[] All =
+        [
             "id",
             "displayName",
             "mail",
@@ -27,18 +27,18 @@ namespace GetAzureADUsers.Core.Constants
             "accountEnabled",
             "createdDateTime",
             "businessPhones"
-        };
+        ];
 
         /// <summary>
         /// Essential user properties (minimal set).
         /// Useful for faster queries when full data not needed.
         /// </summary>
-        public static readonly string[] Essential = new[]
-        {
+        public static readonly string[] Essential =
+        [
             "id",
             "displayName",
             "mail",
             "userPrincipalName"
-        };
+        ];
     }
 }

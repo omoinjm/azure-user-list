@@ -1,8 +1,8 @@
 using Azure.Identity;
-using GetAzureADUsers.Core.Configuration;
+using Core.Configuration;
 using Microsoft.Graph;
 
-namespace GetAzureADUsers.Infrastructure.Graph
+namespace Infrastructure.Graph
 {
     /// <summary>
     /// Creates authenticated Graph Service Clients using Client Credentials flow.
@@ -17,14 +17,9 @@ namespace GetAzureADUsers.Infrastructure.Graph
     /// - Support for multiple auth strategies
     /// - Centralized authentication logic
     /// </summary>
-    public class GraphAuthenticator : IGraphAuthenticator
+    public class GraphAuthenticator(IAzureADConfiguration config) : IGraphAuthenticator
     {
-        private readonly IAzureADConfiguration _config;
-
-        public GraphAuthenticator(IAzureADConfiguration config)
-        {
-            _config = config ?? throw new System.ArgumentNullException(nameof(config));
-        }
+        private readonly IAzureADConfiguration _config = config ?? throw new System.ArgumentNullException(nameof(config));
 
         /// <summary>
         /// Creates and returns an authenticated GraphServiceClient using client credentials.

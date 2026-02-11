@@ -1,10 +1,10 @@
-using GetAzureADUsers.Core.Models;
+using Core.Models;
 using System.Threading.Tasks;
 
-namespace GetAzureADUsers.Infrastructure.Graph
+namespace Infrastructure.Graph
 {
     /// <summary>
-    /// Contract for fetching Azure AD users from Microsoft Graph API.
+    /// Contract for fetching Azure Entra users from Microsoft Graph API.
     /// 
     /// WHY: Abstracts Graph API details, enables:
     /// - Easy testing (mock the interface)
@@ -12,7 +12,7 @@ namespace GetAzureADUsers.Infrastructure.Graph
     /// - Encapsulating pagination logic
     /// - Isolating Graph SDK from business logic
     /// </summary>
-    public interface IAzureADUserFetcher
+    public interface IAzureEntraUserFetcher
     {
         /// <summary>
         /// Fetches all users from Azure AD.

@@ -1,6 +1,6 @@
 using Microsoft.Graph;
 
-namespace GetAzureADUsers.Infrastructure.Graph
+namespace Infrastructure.Graph
 {
     /// <summary>
     /// Contract for creating authenticated Graph Service Clients.

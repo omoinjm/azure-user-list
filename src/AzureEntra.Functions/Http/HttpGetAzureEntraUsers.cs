@@ -1,8 +1,8 @@
-using GetAzureADUsers.Core.Configuration;
-using GetAzureADUsers.Core.Constants;
-using GetAzureADUsers.Infrastructure.Graph;
-using GetAzureADUsers.Infrastructure.Persistence;
-using GetAzureADUsers.Services;
+using Core.Configuration;
+using Core.Constants;
+using Infrastructure.Graph;
+using Infrastructure.Persistence;
+using Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
-namespace GetAzureADUsers.Functions
+namespace AzureEntra.Functions
 {
     /// <summary>
     /// Azure Function to retrieve and synchronize Azure AD users.
@@ -35,15 +35,15 @@ namespace GetAzureADUsers.Functions
     /// 
     /// Authorization: Function-level (requires API key in x-functions-key header)
     /// </summary>
-    public static class HttpGetAzureADUsers
+    public static class HttpGetAzureEntraUsers
     {
-        [FunctionName("HttpGetAzureADUsers")]
+        [FunctionName("HttpGetAzureEntraUsers")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("HttpGetAzureADUsers triggered.");
+            log.LogInformation("HttpGetAzureEntraUsers triggered.");
 
             try
             {

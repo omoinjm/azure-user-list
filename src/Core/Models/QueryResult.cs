@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace GetAzureADUsers.Core.Models
+namespace Core.Models
 {
     /// <summary>
     /// Result container for a Graph API query.
@@ -11,9 +11,9 @@ namespace GetAzureADUsers.Core.Models
     public class QueryResult
     {
         /// <summary>
-        /// List of Azure AD users returned from Graph API.
+        /// List of Azure Entra users returned from Graph API.
         /// </summary>
-        public List<AzureADUser> Users { get; set; } = new();
+        public List<AzureEntraUser> Users { get; set; } = new();
 
         /// <summary>
         /// OData next link for pagination.

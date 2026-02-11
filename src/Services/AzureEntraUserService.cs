@@ -1,52 +1,44 @@
-using GetAzureADUsers.Core.Configuration;
-using GetAzureADUsers.Core.Models;
-using GetAzureADUsers.Infrastructure.Graph;
-using GetAzureADUsers.Infrastructure.Persistence;
+using Core.Configuration;
+using Core.Models;
+using Infrastructure.Graph;
+using Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace GetAzureADUsers.Services
+namespace Services
 {
     /// <summary>
-    /// Application service coordinating Azure AD user synchronization.
+    /// Application service coordinating Azure Entra user synchronization.
     /// 
     /// Responsibility: Orchestrate the flow
-    /// - Fetch users from Azure AD
+    /// - Fetch users from Azure Entra
     /// - Transform/map if needed
     /// - Persist to database
     /// - Handle errors with context
     /// 
     /// NOT responsible for:
-    /// - Graph SDK details (delegated to IAzureADUserFetcher)
-    /// - SQL details (delegated to IAzureUserRepository)
-    /// - Configuration retrieval (delegated to IAzureADConfiguration)
+    /// - Graph SDK details (delegated to IAzureEntraUserFetcher)
+    /// - SQL details (delegated to IAzureEntraUserRepository)
+    /// - Configuration retrieval (delegated to IAzureEntraConfiguration)
     /// 
     /// WHY: Clean separation allows independent testing of each concern.
     /// Mock the interfaces in unit tests, test service logic in isolation.
     /// </summary>
-    public class AzureADUserService
+    public class AzureEntraUserService(
+        IAzureEntraUserFetcher userFetcher,
+        IAzureEntraUserRepository repository,
+        IAzureEntraConfiguration config,
+        ILogger logger = null)
     {
-        private readonly IAzureADUserFetcher _userFetcher;
-        private readonly IAzureUserRepository _repository;
-        private readonly IAzureADConfiguration _config;
-        private readonly ILogger _logger;
-
-        public AzureADUserService(
-            IAzureADUserFetcher userFetcher,
-            IAzureUserRepository repository,
-            IAzureADConfiguration config,
-            ILogger logger = null)
-        {
-            _userFetcher = userFetcher ?? throw new ArgumentNullException(nameof(userFetcher));
-            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _config = config ?? throw new ArgumentNullException(nameof(config));
-            _logger = logger;
-        }
+        private readonly IAzureEntraUserFetcher _userFetcher = userFetcher ?? throw new ArgumentNullException(nameof(userFetcher));
+        private readonly IAzureEntraUserRepository _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        private readonly IAzureEntraConfiguration _config = config ?? throw new ArgumentNullException(nameof(config));
+        private readonly ILogger _logger = logger;
 
         /// <summary>
-        /// Synchronizes users from Azure AD to the database.
+        /// Synchronizes users from Azure Entra to the database.
         /// 
         /// Flow:
         /// 1. Fetch users from Graph API
@@ -116,40 +108,5 @@ namespace GetAzureADUsers.Services
                 throw;
             }
         }
-    }
-
-    /// <summary>
-    /// Result of a user synchronization operation.
-    /// 
-    /// WHY: Provides structured result instead of returning raw data.
-    /// Includes metadata (success, counts, execution time) for monitoring.
-    /// </summary>
-    public class SyncResult
-    {
-        /// <summary>
-        /// Whether the synchronization succeeded.
-        /// </summary>
-        public bool Success { get; set; }
-
-        /// <summary>
-        /// Number of users fetched from Azure AD.
-        /// </summary>
-        public int UserCount { get; set; }
-
-        /// <summary>
-        /// Number of database rows affected.
-        /// </summary>
-        public int RowsAffected { get; set; }
-
-        /// <summary>
-        /// Human-readable status message.
-        /// </summary>
-        public string Message { get; set; }
-
-        /// <summary>
-        /// Total execution time of the synchronization.
-        /// Useful for monitoring performance.
-        /// </summary>
-        public TimeSpan ExecutionTime { get; set; }
     }
 }

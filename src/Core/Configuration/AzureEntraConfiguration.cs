@@ -1,17 +1,17 @@
 using System;
 
-namespace GetAzureADUsers.Core.Configuration
+namespace Core.Configuration
 {
     /// <summary>
-    /// Reads Azure AD configuration from environment variables.
+    /// Reads Azure Entra configuration from environment variables.
     /// 
     /// WHY: 
     /// - Centralizes configuration access (not scattered across services)
     /// - Validates all variables at startup (not on first use)
-    /// - Enables mocking via IAzureADConfiguration interface
+    /// - Enables mocking via IAzureEntraConfiguration interface
     /// - Future: easy to add appsettings.json or KeyVault support
     /// </summary>
-    public class AzureADConfiguration : IAzureADConfiguration
+    public class AzureEntraConfiguration : IAzureEntraConfiguration
     {
         public string ClientId =>
             GetEnvironmentVariable("AZURE_CLIENT_ID");

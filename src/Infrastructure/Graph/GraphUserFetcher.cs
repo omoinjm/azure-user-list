@@ -1,11 +1,11 @@
-using GetAzureADUsers.Core.Models;
+using Core.Models;
 using Microsoft.Graph;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace GetAzureADUsers.Infrastructure.Graph
+namespace Infrastructure.Graph
 {
     /// <summary>
     /// Fetches users from Azure Active Directory using Microsoft Graph API.
@@ -19,18 +19,13 @@ namespace GetAzureADUsers.Infrastructure.Graph
     /// 
     /// Compatible with Microsoft.Graph SDK v5+
     /// </summary>
-    public class GraphUserFetcher : IAzureADUserFetcher
+    public class GraphUserFetcher(IGraphAuthenticator authenticator) : IAzureADUserFetcher
     {
-        private readonly IGraphAuthenticator _authenticator;
+        private readonly IGraphAuthenticator _authenticator = authenticator ?? throw new ArgumentNullException(nameof(authenticator));
         private const int PageSize = 999;
 
-        public GraphUserFetcher(IGraphAuthenticator authenticator)
-        {
-            _authenticator = authenticator ?? throw new ArgumentNullException(nameof(authenticator));
-        }
-
         /// <summary>
-        /// Fetches all users from Azure AD with automatic pagination.
+        /// Fetches all users from Azure Entra with automatic pagination.
         /// </summary>
         public async Task<QueryResult> FetchUsersAsync(string[] selectFields = null)
         {

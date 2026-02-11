@@ -1,4 +1,4 @@
-using GetAzureADUsers.Core.Models;
+using Core.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace GetAzureADUsers.Infrastructure.Persistence
+namespace Infrastructure.Persistence
 {
     /// <summary>
     /// SQL Server implementation of Azure user repository.

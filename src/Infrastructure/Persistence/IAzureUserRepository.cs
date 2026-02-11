@@ -1,8 +1,8 @@
-using GetAzureADUsers.Core.Models;
+using Core.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace GetAzureADUsers.Infrastructure.Persistence
+namespace Infrastructure.Persistence
 {
     /// <summary>
     /// Contract for persisting Azure AD users to storage.
