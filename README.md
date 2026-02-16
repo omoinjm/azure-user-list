@@ -44,19 +44,24 @@ Core (Domain Models + Configuration)
 ## 🔧 Project Structure
 
 ```
-GetAzureADUsers/
+AzureEntra/
 ├── Core/
 │   ├── Configuration/          # Configuration interfaces & implementation
 │   ├── Constants/              # Field selectors, constants
-│   └── Models/                 # Domain models (AzureADUser, QueryResult)
+│   └── Models/                 # Domain models (AzureEntraUser, QueryResult)
 ├── Infrastructure/
 │   ├── Graph/                  # Graph API authentication & user fetching
-│   └── Persistence/            # SQL Server repository
+│   ├── Persistence/            # Repository implementations (SQL Server & PostgreSQL)
+│   ├── Utilities/              # Utility classes (retry policies, etc.)
+│   └── Health/                 # Health check implementations
 ├── Services/
-│   └── AzureADUserService.cs   # Business logic orchestration
+│   └── AzureEntraUserService.cs # Business logic orchestration
 ├── Functions/
-│   └── HttpGetAzureADUsers.cs  # HTTP trigger entry point
-└── GetAzureADUsers.csproj
+│   ├── Http/
+│   │   ├── HttpGetAzureEntraUsers.cs  # HTTP trigger entry point
+│   │   └── HealthCheckFunction.cs     # Health check endpoint
+│   └── Program.cs              # Dependency injection setup
+└── AzureEntra.Functions.csproj
 ```
 
 ---
@@ -140,6 +145,7 @@ cp local.settings.json.template local.settings.json
 
 Edit `local.settings.json` and add your credentials:
 
+For PostgreSQL:
 ```json
 {
   "IsEncrypted": false,
@@ -149,7 +155,24 @@ Edit `local.settings.json` and add your credentials:
     "AZURE_TENANT_ID": "your-tenant-id",
     "AZURE_CLIENT_ID": "your-client-id",
     "AZURE_CLIENT_SECRET": "your-client-secret",
-    "SQL_CONNECTION_STRING": "Server=your-server;Database=your-db;User Id=your-user;Password=your-password;"
+    "POSTGRESQL_CONNECTION_STRING": "Host=localhost;Database=your-db;Username=your-user;Password=your-password;",
+    "DATABASE_PROVIDER": "PostgreSQL"
+  }
+}
+```
+
+For SQL Server:
+```json
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AZURE_TENANT_ID": "your-tenant-id",
+    "AZURE_CLIENT_ID": "your-client-id",
+    "AZURE_CLIENT_SECRET": "your-client-secret",
+    "SQL_CONNECTION_STRING": "Server=your-server;Database=your-db;User Id=your-user;Password=your-password;",
+    "DATABASE_PROVIDER": "SqlServer"
   }
 }
 ```
@@ -212,6 +235,7 @@ az functionapp create \
 
 #### 3.3 Configure Application Settings
 
+For PostgreSQL:
 ```bash
 az functionapp config appsettings set \
   --name myFunctionApp \
@@ -220,7 +244,21 @@ az functionapp config appsettings set \
     AZURE_TENANT_ID="your-tenant-id" \
     AZURE_CLIENT_ID="your-client-id" \
     AZURE_CLIENT_SECRET="your-client-secret" \
-    SQL_CONNECTION_STRING="your-connection-string"
+    POSTGRESQL_CONNECTION_STRING="your-postgresql-connection-string" \
+    DATABASE_PROVIDER="PostgreSQL"
+```
+
+For SQL Server:
+```bash
+az functionapp config appsettings set \
+  --name myFunctionApp \
+  --resource-group myResourceGroup \
+  --settings \
+    AZURE_TENANT_ID="your-tenant-id" \
+    AZURE_CLIENT_ID="your-client-id" \
+    AZURE_CLIENT_SECRET="your-client-secret" \
+    SQL_CONNECTION_STRING="your-sqlserver-connection-string" \
+    DATABASE_PROVIDER="SqlServer"
 ```
 
 #### 3.4 Deploy
@@ -236,14 +274,23 @@ func azure functionapp publish myFunctionApp
 ```
 Client (HTTP GET /api/users)
     ↓
-HttpGetAzureADUsers (orchestrates)
+HttpGetAzureEntraUsers (DI resolves dependencies)
     ↓
-AzureADUserService (business logic)
-    ├─→ GraphAuthenticator (gets auth token)
-    ├─→ GraphUserFetcher (fetches from Graph API)
-    └─→ SqlAzureUserRepository (persists to SQL Server)
+AzureEntraUserService (business logic)
+    ├─→ IGraphAuthenticator (gets auth token)
+    ├─→ IAzureEntraUserFetcher (fetches from Graph API with retry/pagination)
+    └─→ ISqlAzureUserRepository (persists to SQL Server)
     ↓
 Response (SyncResult: success/error, count, details)
+
+Health Check Flow:
+Client (HTTP GET /api/health)
+    ↓
+HealthCheckFunction
+    ↓
+AzureADHealthCheck
+    ↓
+Response (Health status)
 ```
 
 ---
@@ -256,27 +303,84 @@ Response (SyncResult: success/error, count, details)
 - ✅ **Function-Level Authorization** - Restrict by IP/auth
 - ✅ **Centralized Config Validation** - Fails fast if credentials missing
 - ✅ **Async/Await Throughout** - No blocking operations
+- ✅ **Dependency Injection** - Reduces attack surface by controlling object creation
+- ✅ **Health Checks** - Monitor service availability and connectivity
+- ✅ **EF Core Migrations** - Safe schema updates and versioning
 
 ---
 
 ## 🧪 Testing
 
-Unit test examples are provided in the documentation. To run tests:
+Unit tests are included in the Services.UnitTests project. To run tests:
 
 ```bash
-# Create test project (if needed)
-dotnet new xunit -n GetAzureADUsers.Tests
-
-# Install test dependencies
-cd GetAzureADUsers.Tests
-dotnet add package Moq
-dotnet add package xunit
-
-# Run tests
+# Run all tests
 dotnet test
+
+# Run tests with coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# Run specific test project
+dotnet test src/Services.UnitTests/Services.UnitTests.csproj
 ```
 
-See [Unit Test Examples](./docs/UNIT_TEST_EXAMPLES.md) for comprehensive patterns.
+The project includes:
+- Unit tests for service layer logic
+- Mock implementations for external dependencies
+- Integration patterns for Graph API and database operations
+
+## 🛠️ Entity Framework Core Migrations
+
+The project uses Entity Framework Core for database management. To manage migrations:
+
+### Using Migration Scripts (Recommended)
+
+The project includes convenient scripts for managing migrations:
+
+```bash
+# Create a new migration for PostgreSQL
+./scripts/generate-migration.sh MyMigrationName PostgreSQL
+
+# Create a new migration for SQL Server
+./scripts/generate-migration.sh MyMigrationName SqlServer
+
+# Apply migrations to development environment
+./scripts/apply-migration.sh Development PostgreSQL
+
+# Apply migrations to production (with confirmation)
+./scripts/apply-migration.sh Production PostgreSQL
+```
+
+### Manual Migration Commands
+
+Alternatively, you can use manual EF Core commands:
+
+```bash
+# Add a new migration
+dotnet ef migrations add InitialCreate --project src/Infrastructure --startup-project src/AzureEntra.Functions
+
+# For PostgreSQL
+dotnet ef migrations add MigrationName --project src/Infrastructure --startup-project src/AzureEntra.Functions --context PostgreSqlAzureEntraDbContext
+
+# For SQL Server
+dotnet ef migrations add MigrationName --project src/Infrastructure --startup-project src/AzureEntra.Functions --context SqlServerAzureEntraDbContext
+```
+
+### Applying Migrations
+
+```bash
+# Apply migrations to the database
+dotnet ef database update --project src/Infrastructure --startup-project src/AzureEntra.Functions
+```
+
+### Removing Migrations
+
+```bash
+# Remove the last migration
+dotnet ef migrations remove --project src/Infrastructure --startup-project src/AzureEntra.Functions
+```
+
+The EF Core implementation automatically applies pending migrations when the service runs with the EF Core option enabled.
 
 ---
 
@@ -290,14 +394,16 @@ See [Unit Test Examples](./docs/UNIT_TEST_EXAMPLES.md) for comprehensive pattern
 
 ## 🛠️ Configuration
 
-All configuration is managed via **AzureADConfiguration.cs** and validated at startup:
+All configuration is managed via **AzureEntraConfiguration.cs** and validated at startup:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `AZURE_TENANT_ID` | Yes | Azure AD tenant ID |
 | `AZURE_CLIENT_ID` | Yes | Application (client) ID |
 | `AZURE_CLIENT_SECRET` | Yes | Client secret value |
-| `SQL_CONNECTION_STRING` | Yes | SQL Server connection string |
+| `SQL_CONNECTION_STRING` | No | SQL Server connection string (required if using SqlServer provider) |
+| `POSTGRESQL_CONNECTION_STRING` | No | PostgreSQL connection string (required if using PostgreSQL provider) |
+| `DATABASE_PROVIDER` | No | Database provider to use (PostgreSQL or SqlServer, defaults to PostgreSQL) |
 
 Missing configuration throws `InvalidOperationException` on function startup.
 
@@ -307,10 +413,17 @@ Missing configuration throws `InvalidOperationException` on function startup.
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| Microsoft.Graph | 4.50.0 | Azure AD user fetching |
-| Azure.Identity | 1.8.0 | Secure credential handling |
-| Microsoft.Data.SqlClient | Latest | Database access |
-| Microsoft.Azure.Functions.Worker | Latest | Azure Functions runtime |
+| Microsoft.Graph | 5.102.0 | Azure AD user fetching |
+| Azure.Identity | 1.17.1 | Secure credential handling |
+| Microsoft.Data.SqlClient | 5.2.2 | SQL Server database access |
+| Npgsql | 8.0.3 | PostgreSQL database access |
+| Npgsql.EntityFrameworkCore.PostgreSQL | 8.0.4 | PostgreSQL EF Core provider |
+| Microsoft.EntityFrameworkCore.SqlServer | 8.0.8 | SQL Server EF Core provider |
+| Microsoft.EntityFrameworkCore.Tools | 8.0.8 | EF Core command-line tools |
+| Microsoft.EntityFrameworkCore.Design | 8.0.8 | EF Core design-time tools |
+| Microsoft.Azure.Functions.Worker | 2.51.0 | Azure Functions runtime |
+| Microsoft.Extensions.* | 9.0.0 | Dependency injection and configuration |
+| Newtonsoft.Json | 13.0.3 | JSON serialization |
 
 ---
 
@@ -324,23 +437,84 @@ GET /api/users HTTP/1.1
 Host: myFunctionApp.azurewebsites.net
 ```
 
+**Request with EF Core:**
+```http
+GET /api/users?useEfCore=true HTTP/1.1
+Host: myFunctionApp.azurewebsites.net
+```
+
 **Response (200 OK):**
 ```json
 {
-  "isSuccess": true,
-  "userCount": 42,
-  "errorMessage": null,
-  "timestamp": "2026-01-28T23:50:00Z"
+  "success": true,
+  "message": "Successfully synchronized 42 users.",
+  "data": {
+    "userCount": 42,
+    "rowsAffected": 42,
+    "executionTimeMs": 1234.5,
+    "persistenceMethod": "Direct Provider"
+  }
 }
 ```
 
-**Response (500 Internal Server Error):**
+**Response with EF Core (200 OK):**
 ```json
 {
-  "isSuccess": false,
-  "userCount": 0,
-  "errorMessage": "Failed to authenticate with Azure AD",
-  "timestamp": "2026-01-28T23:50:00Z"
+  "success": true,
+  "message": "Successfully synchronized 42 users.",
+  "data": {
+    "userCount": 42,
+    "rowsAffected": 42,
+    "executionTimeMs": 1234.5,
+    "persistenceMethod": "EF Core"
+  }
+}
+```
+
+**Response (400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": "Configuration error",
+  "message": "Environment variable 'AZURE_TENANT_ID' is not configured. Please set it before running the function."
+}
+```
+
+### GET `/api/health`
+
+**Request:**
+```http
+GET /api/health HTTP/1.1
+Host: myFunctionApp.azurewebsites.net
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.1234567",
+  "entries": {
+    "azureadconnectivity": {
+      "status": "Healthy",
+      "description": "Azure AD connectivity is healthy.",
+      "duration": "00:00:00.1234567"
+    }
+  }
+}
+```
+
+**Response (503 Service Unavailable):**
+```json
+{
+  "status": "Unhealthy",
+  "totalDuration": "00:00:00.1234567",
+  "entries": {
+    "azureadconnectivity": {
+      "status": "Unhealthy",
+      "description": "Azure AD connectivity is unhealthy.",
+      "duration": "00:00:00.1234567"
+    }
+  }
 }
 ```
 
@@ -356,6 +530,22 @@ Host: myFunctionApp.azurewebsites.net
 - Verify SQL Server firewall allows Azure Function's IP
 - Check `SQL_CONNECTION_STRING` is correct
 - Verify stored procedure exists in database
+
+**"Dependency injection error":**
+- Ensure all services are registered in Program.cs
+- Check that interfaces match implementations
+- Verify project references are correctly set up
+
+**"PostgreSQL connection error":**
+- Verify PostgreSQL server is accessible
+- Check that POSTGRESQL_CONNECTION_STRING is properly formatted
+- Ensure PostgreSQL database and user have proper permissions
+- Confirm that Npgsql package is correctly referenced
+
+**"Database provider configuration error":**
+- Verify DATABASE_PROVIDER is set to either "PostgreSQL" or "SqlServer"
+- Ensure the corresponding connection string is provided
+- Check that the required database is running and accessible
 
 **"User.Read.All permission not granted":**
 - Ensure you clicked "Grant admin consent" in Azure AD

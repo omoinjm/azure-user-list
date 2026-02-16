@@ -23,7 +23,13 @@ namespace Core.Configuration
             GetEnvironmentVariable("AZURE_CLIENT_SECRET");
 
         public string SqlConnectionString =>
-            GetEnvironmentVariable("SqlConnectionString");
+            GetEnvironmentVariable("SQL_CONNECTION_STRING");
+
+        public string PostgreSqlConnectionString =>
+            GetEnvironmentVariable("POSTGRESQL_CONNECTION_STRING");
+
+        public string DatabaseProvider =>
+            GetEnvironmentVariableWithDefault("DATABASE_PROVIDER", "PostgreSql");
 
         /// <summary>
         /// Retrieves environment variable with validation.
@@ -42,6 +48,17 @@ namespace Core.Configuration
             }
 
             return value;
+        }
+        
+        /// <summary>
+        /// Retrieves environment variable with a default value if not set.
+        /// </summary>
+        private static string GetEnvironmentVariableWithDefault(string name, string defaultValue)
+        {
+            var value = System.Environment.GetEnvironmentVariable(
+                name, EnvironmentVariableTarget.Process);
+
+            return string.IsNullOrEmpty(value) ? defaultValue : value;
         }
     }
 }

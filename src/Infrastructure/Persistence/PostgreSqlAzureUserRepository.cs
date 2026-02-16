@@ -1,5 +1,5 @@
 using Core.Models;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
@@ -10,41 +10,41 @@ using System.Threading.Tasks;
 namespace Infrastructure.Persistence
 {
     /// <summary>
-    /// SQL Server implementation of Azure user repository.
-    /// 
-    /// WHY: Encapsulates all SQL-specific logic:
+    /// PostgreSQL implementation of Azure user repository.
+    ///
+    /// WHY: Encapsulates all PostgreSQL-specific logic:
     /// - Connection management
     /// - Command execution
     /// - Parameterized queries (prevents SQL injection)
     /// - Serialization/deserialization
     /// - Async operations
-    /// 
+    ///
     /// This enables:
-    /// - Services don't know about SQL
-    /// - Easy testing (mock IAzureUserRepository)
+    /// - Services don't know about PostgreSQL
+    /// - Easy testing (mock IAzureEntraUserRepository)
     /// - Easy migration to different database
     /// </summary>
-    public class SqlAzureUserRepository : IAzureEntraUserRepository
+    public class PostgreSqlAzureUserRepository : IAzureEntraUserRepository
     {
         private readonly string _connectionString;
         private readonly ILogger _logger;
-        private const string TableName = "[dbo].[TR_AzureUserQuery]";
+        private const string TableName = "tr_azure_user_query"; // Using snake_case for PostgreSQL convention
 
-        public SqlAzureUserRepository(string connectionString, ILogger logger = null)
+        public PostgreSqlAzureUserRepository(string connectionString, ILogger logger = null)
         {
             if (string.IsNullOrEmpty(connectionString))
-                throw new ArgumentNullException(nameof(connectionString), 
-                    "SQL connection string cannot be null or empty.");
+                throw new ArgumentNullException(nameof(connectionString),
+                    "PostgreSQL connection string cannot be null or empty.");
 
             _connectionString = connectionString;
             _logger = logger;
         }
 
         /// <summary>
-        /// Persists users to SQL Server database.
-        /// 
+        /// Persists users to PostgreSQL database.
+        ///
         /// Uses parameterized queries to prevent SQL injection attacks.
-        /// Serializes user list to JSON for storage.
+        /// Serializes user list to JSON for storage using PostgreSQL's JSONB type.
         /// </summary>
         /// <param name="users">Collection of Azure AD users to persist.</param>
         /// <returns>Number of rows affected in database.</returns>
@@ -65,14 +65,14 @@ namespace Infrastructure.Persistence
                 // Serialize users to JSON
                 var json = JsonConvert.SerializeObject(userList);
 
-                // Use async SQL connection
-                using (var connection = new SqlConnection(_connectionString))
+                // Use async PostgreSQL connection
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync().ConfigureAwait(false);
 
                     // Use parameterized query to prevent SQL injection
-                    using (var command = new SqlCommand(
-                        $"INSERT INTO {TableName} (QueryDate, QueryResult) " +
+                    using (var command = new NpgsqlCommand(
+                        $"INSERT INTO {TableName} (query_date, query_result) " +
                         "VALUES (@queryDate, @queryResult)",
                         connection))
                     {
@@ -91,15 +91,15 @@ namespace Infrastructure.Persistence
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (NpgsqlException ex)
             {
                 _logger?.LogError(ex,
-                    "SQL error while saving {UserCount} users. " +
-                    "Connection: {ConnectionString}, Error: {SqlError}",
+                    "PostgreSQL error while saving {UserCount} users. " +
+                    "Connection: {ConnectionString}, Error: {PgError}",
                     userList.Count, _connectionString.Substring(0, 30) + "***", ex.Message);
 
                 throw new InvalidOperationException(
-                    "Failed to save users to database due to SQL error.", ex);
+                    "Failed to save users to database due to PostgreSQL error.", ex);
             }
             catch (JsonException ex)
             {
@@ -118,6 +118,27 @@ namespace Infrastructure.Persistence
 
                 throw new InvalidOperationException(
                     "Unexpected error while saving users to database.", ex);
+            }
+        }
+        
+        /// <summary>
+        /// Creates the required table if it doesn't exist.
+        /// </summary>
+        public async Task EnsureTableExistsAsync()
+        {
+            using (var connection = new NpgsqlConnection(_connectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+
+                using (var command = new NpgsqlCommand($@"
+                    CREATE TABLE IF NOT EXISTS {TableName} (
+                        id SERIAL PRIMARY KEY,
+                        query_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        query_result JSONB NOT NULL
+                    )", connection))
+                {
+                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+                }
             }
         }
     }

@@ -13,13 +13,13 @@ namespace Infrastructure.Persistence
     /// - Multiple persistence strategies
     /// - Centralized database logic
     /// </summary>
-    public interface IAzureUserRepository
+    public interface IAzureEntraUserRepository
     {
         /// <summary>
         /// Saves a collection of Azure AD users to persistent storage.
         /// </summary>
         /// <param name="users">Collection of users to persist.</param>
         /// <returns>Number of rows/records affected.</returns>
-        Task<int> SaveUsersAsync(IEnumerable<AzureADUser> users);
+        Task<int> SaveUsersAsync(IEnumerable<AzureEntraUser> users);
     }
 }

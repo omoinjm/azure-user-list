@@ -17,9 +17,9 @@ namespace Infrastructure.Graph
     /// - Support for multiple auth strategies
     /// - Centralized authentication logic
     /// </summary>
-    public class GraphAuthenticator(IAzureADConfiguration config) : IGraphAuthenticator
+    public class GraphAuthenticator(IAzureEntraConfiguration config) : IGraphAuthenticator
     {
-        private readonly IAzureADConfiguration _config = config ?? throw new System.ArgumentNullException(nameof(config));
+        private readonly IAzureEntraConfiguration _config = config ?? throw new System.ArgumentNullException(nameof(config));
 
         /// <summary>
         /// Creates and returns an authenticated GraphServiceClient using client credentials.

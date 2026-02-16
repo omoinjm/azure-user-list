@@ -1,72 +1,71 @@
-using Core.Configuration;
-using Core.Constants;
-using Infrastructure.Graph;
-using Infrastructure.Persistence;
-using Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
-
 namespace AzureEntra.Functions
 {
+    using Core.Configuration;
+    using Core.Constants;
+    using Infrastructure.Graph;
+    using Infrastructure.Persistence;
+    using Services;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Azure.Functions.Worker;
+    using Microsoft.Extensions.Logging;
+    using System;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// Azure Function to retrieve and synchronize Azure AD users.
-    /// 
+    ///
     /// Entry point for HTTP requests to fetch Azure AD users and persist them to database.
-    /// 
+    ///
     /// Responsibility: ORCHESTRATION ONLY
     /// - Parse HTTP request
     /// - Build dependencies
     /// - Call service
     /// - Format HTTP response
     /// - Map HTTP errors
-    /// 
+    ///
     /// Does NOT contain:
     /// - Business logic
     /// - Graph SDK calls
     /// - Database operations
-    /// 
+    ///
     /// WHY: Functions are thin orchestrators. Real work happens in services.
     /// This makes the function easy to understand and test.
-    /// 
+    ///
     /// Authorization: Function-level (requires API key in x-functions-key header)
     /// </summary>
-    public static class HttpGetAzureEntraUsers
+    public class HttpGetAzureEntraUsers
     {
-        [FunctionName("HttpGetAzureEntraUsers")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
-            HttpRequest req,
-            ILogger log)
+        private readonly AzureEntraUserService _userService;
+        private readonly ILogger<HttpGetAzureEntraUsers> _logger;
+
+        public HttpGetAzureEntraUsers(AzureEntraUserService userService, ILogger<HttpGetAzureEntraUsers> logger)
         {
-            log.LogInformation("HttpGetAzureEntraUsers triggered.");
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        [Function("HttpGetAzureEntraUsers")]
+        public async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req)
+        {
+            _logger.LogInformation("HttpGetAzureEntraUsers triggered.");
+
+            // Determine if EF Core should be used based on query parameter
+            var useEfCore = !string.IsNullOrEmpty(req.Query["useEfCore"]) && 
+                           req.Query["useEfCore"].ToString().ToLower() == "true";
 
             try
             {
-                // Step 1: Load configuration from environment
-                var config = new AzureADConfiguration();
-
-                // Step 2: Build infrastructure dependencies
-                var authenticator = new GraphAuthenticator(config);
-                var userFetcher = new GraphUserFetcher(authenticator);
-                var repository = new SqlAzureUserRepository(config.SqlConnectionString, log);
-
-                // Step 3: Create service
-                var service = new AzureADUserService(userFetcher, repository, config, log);
-
-                // Step 4: Execute business logic
+                // Execute business logic
                 // Use GraphFields.All to fetch all user properties
-                var result = await service.SynchronizeUsersAsync(GraphFields.All)
+                var result = await _userService.SynchronizeUsersAsync(GraphFields.All, useEfCore)
                     .ConfigureAwait(false);
 
-                // Step 5: Return HTTP response
+                // Return HTTP response
                 if (result.Success)
                 {
-                    log.LogInformation("Synchronization successful.");
+                    _logger.LogInformation("Synchronization successful.");
                     return new OkObjectResult(new
                     {
                         success = true,
@@ -75,12 +74,13 @@ namespace AzureEntra.Functions
                         {
                             userCount = result.UserCount,
                             rowsAffected = result.RowsAffected,
-                            executionTimeMs = result.ExecutionTime.TotalMilliseconds
+                            executionTimeMs = result.ExecutionTime.TotalMilliseconds,
+                            persistenceMethod = useEfCore ? "EF Core" : "Direct Provider"
                         }
                     });
                 }
 
-                log.LogWarning("Synchronization completed with no data.");
+                _logger.LogWarning("Synchronization completed with no data.");
                 return new BadRequestObjectResult(new
                 {
                     success = false,
@@ -90,7 +90,7 @@ namespace AzureEntra.Functions
             }
             catch (InvalidOperationException ex)
             {
-                log.LogError(ex, "Configuration error during synchronization.");
+                _logger.LogError(ex, "Configuration error during synchronization.");
                 return new BadRequestObjectResult(new
                 {
                     success = false,
@@ -100,7 +100,7 @@ namespace AzureEntra.Functions
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "Unexpected error during synchronization.");
+                _logger.LogError(ex, "Unexpected error during synchronization.");
                 return new ObjectResult(new
                 {
                     success = false,

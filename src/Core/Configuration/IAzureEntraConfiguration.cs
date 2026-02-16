@@ -27,5 +27,15 @@ namespace Core.Configuration
         /// SQL Server connection string for persistence.
         /// </summary>
         string SqlConnectionString { get; }
+        
+        /// <summary>
+        /// PostgreSQL connection string for persistence.
+        /// </summary>
+        string PostgreSqlConnectionString { get; }
+        
+        /// <summary>
+        /// Database provider to use (SqlServer or PostgreSql).
+        /// </summary>
+        string DatabaseProvider { get; }
     }
 }
